@@ -175,7 +175,7 @@ def handle_menu(update: Update, context: CallbackContext):
     elif data == "rules":
         rules(update, context)
 
-if name == "main":
+if __name__ == "__main__":
     keep_alive()
     updater = Updater(token=TOKEN)
     dp = updater.dispatcher
