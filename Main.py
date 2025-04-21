@@ -174,7 +174,8 @@ def handle_menu(update: Update, context: CallbackContext):
 
 if __name__ == "__main__":
     keep_alive()
-    updater = Updater(token=TOKEN)
+    import os
+TOKEN = os.environ["TOKEN"]
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
