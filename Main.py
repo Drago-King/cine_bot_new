@@ -7,8 +7,6 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, Callback
 
 from keep_alive import keep_alive
 
-TOKEN = os.environ["TOKEN"]
-
 # Token and owner
 TOKEN = "YOUR_TOKEN_HERE"
 OWNER_ID = "YOUR_TG_ID"
