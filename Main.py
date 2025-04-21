@@ -127,9 +127,7 @@ def handle_answer(update: Update, context: CallbackContext):
 
 def lore(update: Update, context: CallbackContext):
     quote = random.choice(LORE_QUOTES)
-    update.callback_query.message.reply_text(f"✨ *Lore Drop:*
-{quote}")
-
+    update.callback_query.message.reply_text(f"✨ *Lore Drop:* {quote}", parse_mode="Markdown")
 def vault(update: Update, context: CallbackContext):
     if VAULT:
         legends = "\n".join(VAULT[-5:])
