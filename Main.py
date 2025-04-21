@@ -116,24 +116,28 @@ def send_question(update: Update, context: CallbackContext):
     ask_question(update, context)
 
 def ask_question(update: Update, context: CallbackContext):
-    idx = context.user_data["index"]
-    if idx >= len(context.user_data["questions"]):
-        score = context.user_data["score"]
-        if score == 3:
-            username = update.effective_user.username or "Anonymous"
-            entry = f"{username} (ID: {update.effective_user.id})"
-            VAULT.append(entry)
-            update.callback_query.message.reply_text(f"🏆 *Legendary!* Claim your prize: {PRIZE_LINK}", parse_mode='Markdown')
-        else:
-            update.callback_query.message.reply_text("🚫 You were close... but the Vault remains sealed.")
-        return
+    try:
+        idx = context.user_data["index"]
+        if idx >= len(context.user_data["questions"]):
+            score = context.user_data["score"]
+            if score == 3:
+                VAULT.append(update.effective_user.username)
+                update.callback_query.message.reply_text(f"Legendary! Claim your prize: {PRIZE_LINK}")
+            else:
+                update.callback_query.message.reply_text("You were close... but the vault remains shut.")
+            return
 
-    q = context.user_data["questions"][idx]
-    context.user_data["correct"] = q["answer"]
-    context.user_data["voice"] = q["voice"]
-    buttons = [[InlineKeyboardButton(opt, callback_data=f"answer|{opt}")] for opt in q["options"]]
-    reply_markup = InlineKeyboardMarkup(buttons)
-    update.callback_query.message.reply_text(f"*{q['question']}*", reply_markup=reply_markup, parse_mode="Markdown")
+        q = context.user_data["questions"][idx]
+        context.user_data["correct"] = q["answer"]
+        context.user_data["voice"] = q["voice"]
+        buttons = [[InlineKeyboardButton(opt, callback_data=f"answer|{opt}")] for opt in q["options"]]
+        reply_markup = InlineKeyboardMarkup(buttons)
+
+        update.callback_query.message.reply_text(q["question"], reply_markup=reply_markup)
+
+    except Exception as e:
+        print(f"[ERROR in ask_question] {e}")
+        update.callback_query.message.reply_text("Something went wrong with this question.")
 
 def handle_answer(update: Update, context: CallbackContext):
     query = update.callback_query
