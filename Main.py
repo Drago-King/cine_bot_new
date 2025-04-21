@@ -16,8 +16,8 @@ ALL_QUESTIONS = [
         "question": "Valar Morghulis",
         "options": ["valar dohaeris", "dracarys", "winter is coming"],
         "answer": "valar dohaeris",
-        "voice": "audio_clips/valar.ogg",
-        "image": "audio_clips/valar.jpeg"
+        "voice": "audio_clips/valar_dohaeris.ogg",
+        "image": "audio_clips/valar_dohaeris.jpeg"
     },
     {
         "question": "Say my name.",
