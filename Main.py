@@ -9,7 +9,6 @@ from keep_alive import keep_alive
 
 # Token and owner
 TOKEN = os.environ["TOKEN"]
-TOKEN = "YOUR_TOKEN_HERE"
 OWNER_ID = "YOUR_TG_ID"
 PRIZE_LINK = "ANY_LINK_HERE"
 VAULT = []
