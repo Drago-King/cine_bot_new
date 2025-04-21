@@ -35,7 +35,7 @@ ALL_QUESTIONS = [
     },
     {
         "question": "What is the first rule of F**** C***?",
-        "options": ["you do not talk about f**** c***", "don’t fight", "fight only at night"],
+        "options": ["you do not talk about f**** c***", "don’t mention the club", "fight only at night"],
         "answer": "you do not talk about f**** c***",
         "voice": "audio_clips/fight_club.ogg",
         "image": "audio_clips/fight_club.jpeg"
@@ -140,14 +140,15 @@ def ask_question(update: Update, context: CallbackContext):
             update.callback_query.message.reply_photo(photo=img, caption=q["question"], reply_markup=InlineKeyboardMarkup(buttons))
 
     except Exception as e:
-        update.callback_query.message.reply_text("⚠️ Error loading next question.")
+        update.callback_query.message.reply_text("⚠️ Error loading question.")
         print(f"[ERROR in ask_question] {e}")
+
 def handle_answer(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
     chosen = query.data.split("|", 1)[1]
-    correct = context.user_data["correct"]
-    voice = context.user_data["voice"]
+    correct = context.user_data.get("correct")
+    voice = context.user_data.get("voice")
 
     if chosen.lower() == correct.lower():
         context.user_data["score"] += 1
@@ -204,10 +205,12 @@ if __name__ == "__main__":
     keep_alive()
     updater = Updater(token=TOKEN)
     dp = updater.dispatcher
+
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("ping", status))
     dp.add_handler(CommandHandler("status", status))
-    dp.add_handler(CallbackQueryHandler(handle_answer, pattern="^answer\\|"))
+    dp.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer\|"))
     dp.add_handler(CallbackQueryHandler(handle_menu))
+
     updater.start_polling()
     updater.idle()
