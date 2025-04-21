@@ -118,25 +118,30 @@ def send_question(update: Update, context: CallbackContext):
     ask_question(update, context)
 
 def ask_question(update: Update, context: CallbackContext):
-    idx = context.user_data["index"]
-    if idx >= 4:
-        score = context.user_data["score"]
-        if score >= 3:
-            username = update.effective_user.username or "Anonymous"
-            VAULT.append(f"{username} ({update.effective_user.id})")
-            update.callback_query.message.reply_text(f"🏆 Legendary! Claim your prize: {PRIZE_LINK}")
-        else:
-            update.callback_query.message.reply_text("☠️ You were close... but the vault remains shut.")
-        return
-    q = context.user_data["questions"][idx]
-    context.user_data["correct"] = q["answer"]
-    context.user_data["voice"] = q["voice"]
-    context.user_data["image"] = q["image"]
+    try:
+        idx = context.user_data["index"]
+        if idx >= 4:
+            score = context.user_data["score"]
+            if score >= 3:
+                username = update.effective_user.username or "Anonymous"
+                VAULT.append(f"{username} ({update.effective_user.id})")
+                update.callback_query.message.reply_text(f"🏆 Legendary! Claim your prize: {PRIZE_LINK}")
+            else:
+                update.callback_query.message.reply_text("☠️ You were close... but the vault remains shut.")
+            return
 
-    with open(q["image"], "rb") as img:
-        buttons = [[InlineKeyboardButton(opt, callback_data=f"answer|{opt}")] for opt in q["options"]]
-        update.callback_query.message.reply_photo(photo=img, caption=q["question"], reply_markup=InlineKeyboardMarkup(buttons))
+        q = context.user_data["questions"][idx]
+        context.user_data["correct"] = q["answer"]
+        context.user_data["voice"] = q["voice"]
+        context.user_data["image"] = q["image"]
 
+        with open(q["image"], "rb") as img:
+            buttons = [[InlineKeyboardButton(opt, callback_data=f"answer|{opt}")] for opt in q["options"]]
+            update.callback_query.message.reply_photo(photo=img, caption=q["question"], reply_markup=InlineKeyboardMarkup(buttons))
+
+    except Exception as e:
+        update.callback_query.message.reply_text("⚠️ Error loading next question.")
+        print(f"[ERROR in ask_question] {e}")
 def handle_answer(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
