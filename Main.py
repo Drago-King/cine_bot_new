@@ -4,7 +4,10 @@ import time
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
+
 from keep_alive import keep_alive
+
+TOKEN = os.environ["TOKEN"]
 
 # Token and owner
 TOKEN = "YOUR_TOKEN_HERE"
@@ -172,12 +175,11 @@ def handle_menu(update: Update, context: CallbackContext):
     elif data == "rules":
         rules(update, context)
 
-if __name__ == "__main__":
+if name == "main":
     keep_alive()
-    import os
-TOKEN = os.environ["TOKEN"]
+    updater = Updater(token=TOKEN)
     dp = updater.dispatcher
-
+    
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("ping", status))
     dp.add_handler(CommandHandler("status", status))
