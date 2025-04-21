@@ -7,9 +7,9 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, Callback
 from keep_alive import keep_alive
 
 # Token and owner
-TOKEN = "7520610147:AAHrru8Y4f18tXj24Zvviy_Fb8W4nyr5KD8"
-OWNER_ID = 2136911686
-PRIZE_LINK = "https://t.me/+MRzg7Ne77M8zYjk1"
+TOKEN = "YOUR_TOKEN_HERE"
+OWNER_ID = "YOUR_TG_ID"
+PRIZE_LINK = "ANY_LINK_HERE"
 VAULT = []
 
 ALL_QUESTIONS = [
