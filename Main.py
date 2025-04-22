@@ -1,216 +1,97 @@
 import os
-import random
-import time
-from datetime import datetime
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
-from keep_alive import keep_alive
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    filters,
+)
 
-TOKEN = os.environ["TOKEN"]
-OWNER_ID = int(os.environ.get("OWNER_ID", 0))
-PRIZE_LINK = "https://t.me/+MRzg7Ne77M8zYjk1"
-VAULT = []
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Load securely from environment
+TEMP_FOLDER = "downloads"
+os.makedirs(TEMP_FOLDER, exist_ok=True)
 
-ALL_QUESTIONS = [
-    {
-        "question": "Valar Morghulis",
-        "options": ["valar dohaeris", "dracarys", "winter is coming"],
-        "answer": "valar dohaeris",
-        "voice": "audio_clips/valar_dohaeris.ogg",
-        "image": "audio_clips/valar_dohaeris.jpeg"
-    },
-    {
-        "question": "Say my name.",
-        "options": ["heisenberg", "walter white", "jesse pinkman"],
-        "answer": "heisenberg",
-        "voice": "audio_clips/heisenberg.ogg",
-        "image": "audio_clips/heisenberg.jpeg"
-    },
-    {
-        "question": "What was Maximus’ title before becoming a slave?",
-        "options": ["General of the Roman Army", "Spaniard", "Caesar"],
-        "answer": "General of the Roman Army",
-        "voice": "audio_clips/maximus.ogg",
-        "image": "audio_clips/maximus.jpeg"
-    },
-    {
-        "question": "What is the first rule of F**** C***?",
-        "options": ["you do not talk about f**** c***", "don’t mention the club", "fight only at night"],
-        "answer": "you do not talk about f**** c***",
-        "voice": "audio_clips/fight_club.ogg",
-        "image": "audio_clips/fight_club.jpeg"
-    },
-    {
-        "question": "Who watches the Watchmen?",
-        "options": ["Who watches the Watchmen?", "No one", "We do"],
-        "answer": "Who watches the Watchmen?",
-        "voice": "audio_clips/watchmen.ogg",
-        "image": "audio_clips/watchmen.jpeg"
-    },
-    {
-        "question": "I'm gonna make him an offer he can't refuse.",
-        "options": ["Vito Corleone", "Michael", "Sonny"],
-        "answer": "Vito Corleone",
-        "voice": "audio_clips/godfather.ogg",
-        "image": "audio_clips/godfather.jpeg"
+user_files = {}
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Send me a file and I’ll help you rename it!")
+
+async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file = update.message.document or update.message.video or update.message.audio
+    if not file:
+        await update.message.reply_text("Please send a valid file.")
+        return
+
+    file_id = file.file_id
+    file_name = file.file_name or "file"
+
+    user_id = update.message.from_user.id
+    user_files[user_id] = {
+        "file_id": file_id,
+        "original_name": file_name,
+        "ext": os.path.splitext(file_name)[1],
     }
-]
 
-STORY_CHAPTERS = [
-    {
-        "title": "The Dream of Electric Gods",
-        "intro": "🌌 Neon tears fall under synthetic stars.",
-        "voice": "audio_clips/chapter_blade_runner.ogg",
-        "image": "audio_clips/chapter_blade_runner.jpeg"
-    },
-    {
-        "title": "The Chaos Dilemma",
-        "intro": "🃏 Justice rots in the hearts of men.",
-        "voice": "audio_clips/chapter_dark_knight.ogg",
-        "image": "audio_clips/chapter_dark_knight.jpeg"
-    },
-    {
-        "title": "The Dream Spiral",
-        "intro": "⏳ Gravity warps. Time loops.",
-        "voice": "audio_clips/chapter_inception.ogg",
-        "image": "audio_clips/chapter_inception.jpeg"
-    },
-    {
-        "title": "The Red Pill Path",
-        "intro": "🧠 You’re on the edge of reality.",
-        "voice": "audio_clips/chapter_matrix.ogg",
-        "image": "audio_clips/chapter_matrix.jpeg"
-    },
-    {
-        "title": "The Man Who Burned the World",
-        "intro": "☢️ Silence louder than any bomb.",
-        "voice": "audio_clips/chapter_oppenheimer.ogg",
-        "image": "audio_clips/chapter_oppenheimer.jpeg"
-    },
-    {
-        "title": "The Cost of Kingship",
-        "intro": "♟️ Crowned by blood, haunted by choices.",
-        "voice": "audio_clips/chapter_sopranos.ogg",
-        "image": "audio_clips/chapter_sopranos.jpeg"
-    }
-]
+    await update.message.reply_text(
+        f"Original File: `{file_name}`\n\nSend me the new name **(without extension)**.",
+        parse_mode="Markdown"
+    )
 
-LORE_QUOTES = [
-    "🎬 *A silent lens captures the loudest truths.*",
-    "🎥 *Legends don’t fade—they are preserved in frames.*",
-    "🕯️ *In shadows and whispers, stories awaken.*"
-]
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    if user_id not in user_files:
+        return
 
-def start(update: Update, context: CallbackContext):
+    new_name = update.message.text.strip()
+    ext = user_files[user_id]["ext"]
+    full_name = new_name + ext
+
+    user_files[user_id]["new_name"] = full_name
+
     keyboard = [
-        [InlineKeyboardButton("▶️ Start Quiz", callback_data="start_quiz")],
-        [InlineKeyboardButton("🏛 Vault of Legends", callback_data="vault")],
-        [InlineKeyboardButton("🎬 Story Mode", callback_data="story")],
-        [InlineKeyboardButton("✨ Lore Drop", callback_data="lore")],
-        [InlineKeyboardButton("📜 Rules", callback_data="rules")]
+        [InlineKeyboardButton("✅ Confirm Rename", callback_data="confirm")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
     ]
-    update.message.reply_text("Welcome to the *Underrated Gems* world.", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text(
+        f"New filename will be: `{full_name}`\nConfirm?",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
-def send_question(update: Update, context: CallbackContext):
-    context.user_data["score"] = 0
-    context.user_data["index"] = 0
-    context.user_data["questions"] = random.sample(ALL_QUESTIONS, 4)
-    ask_question(update, context)
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
 
-def ask_question(update: Update, context: CallbackContext):
-    try:
-        idx = context.user_data["index"]
-        if idx >= 4:
-            score = context.user_data["score"]
-            if score >= 3:
-                username = update.effective_user.username or "Anonymous"
-                VAULT.append(f"{username} ({update.effective_user.id})")
-                update.callback_query.message.reply_text(f"🏆 Legendary! Claim your prize: {PRIZE_LINK}")
-            else:
-                update.callback_query.message.reply_text("☠️ You were close... but the vault remains shut.")
+    if query.data == "cancel":
+        user_files.pop(user_id, None)
+        await query.edit_message_text("❌ Rename cancelled.")
+        return
+
+    if query.data == "confirm":
+        if user_id not in user_files:
+            await query.edit_message_text("Session expired. Please resend your file.")
             return
 
-        q = context.user_data["questions"][idx]
-        context.user_data["correct"] = q["answer"]
-        context.user_data["voice"] = q["voice"]
-        context.user_data["image"] = q["image"]
+        data = user_files.pop(user_id)
+        file = await context.bot.get_file(data["file_id"])
+        old_path = os.path.join(TEMP_FOLDER, "temp" + data["ext"])
+        new_path = os.path.join(TEMP_FOLDER, data["new_name"])
 
-        with open(q["image"], "rb") as img:
-            buttons = [[InlineKeyboardButton(opt, callback_data=f"answer|{opt}")] for opt in q["options"]]
-            update.callback_query.message.reply_photo(photo=img, caption=q["question"], reply_markup=InlineKeyboardMarkup(buttons))
+        await file.download_to_drive(old_path)
+        os.rename(old_path, new_path)
 
-    except Exception as e:
-        update.callback_query.message.reply_text("⚠️ Error loading question.")
-        print(f"[ERROR in ask_question] {e}")
+        await context.bot.send_document(chat_id=query.message.chat_id, document=open(new_path, 'rb'))
+        await query.edit_message_text(f"✅ File renamed and sent as `{data['new_name']}`.", parse_mode="Markdown")
+        os.remove(new_path)
 
-def handle_answer(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    chosen = query.data.split("|", 1)[1]
-    correct = context.user_data.get("correct")
-    voice = context.user_data.get("voice")
-
-    if chosen.lower() == correct.lower():
-        context.user_data["score"] += 1
-        query.message.reply_text("✅ Correct.")
-        try:
-            with open(voice, "rb") as clip:
-                query.message.reply_voice(voice=clip)
-        except:
-            query.message.reply_text("⚠️ Audio failed.")
-    else:
-        query.message.reply_text("❌ Incorrect.")
-
-    context.user_data["index"] += 1
-    time.sleep(1)
-    ask_question(update, context)
-
-def vault(update: Update, context: CallbackContext):
-    if VAULT:
-        legends = "\n".join(VAULT[-5:])
-        update.callback_query.message.reply_text(f"🏛 *Vault of Legends:*\n{legends}", parse_mode="Markdown")
-    else:
-        update.callback_query.message.reply_text("🏛 The vault is empty.")
-
-def lore(update: Update, context: CallbackContext):
-    quote = random.choice(LORE_QUOTES)
-    update.callback_query.message.reply_text(f"{quote}", parse_mode="Markdown")
-
-def story(update: Update, context: CallbackContext):
-    chapters = random.sample(STORY_CHAPTERS, 2)
-    for scene in chapters:
-        try:
-            with open(scene["image"], "rb") as img:
-                update.callback_query.message.reply_photo(photo=img, caption=f"*{scene['title']}*\n_{scene['intro']}_", parse_mode="Markdown")
-            with open(scene["voice"], "rb") as clip:
-                update.callback_query.message.reply_voice(voice=clip)
-        except:
-            continue
-
-def rules(update: Update, context: CallbackContext):
-    update.callback_query.message.reply_text("🎞 Answer 4 random cinematic questions.\n🎯 Score 3+ to unlock the Vault.\n☠️ One mistake too many... and you're out.")
-
-def status(update: Update, context: CallbackContext):
-    update.message.reply_text(f"✅ Bot is online.\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n🏆 Legends: {len(VAULT)}")
-
-def handle_menu(update: Update, context: CallbackContext):
-    data = update.callback_query.data
-    if data == "start_quiz": send_question(update, context)
-    elif data == "vault": vault(update, context)
-    elif data == "story": story(update, context)
-    elif data == "lore": lore(update, context)
-    elif data == "rules": rules(update, context)
-
-if __name__ == "__main__":
-    keep_alive()
-    updater = Updater(token=TOKEN)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("ping", status))
-    dp.add_handler(CommandHandler("status", status))
-    dp.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer\|"))
-    dp.add_handler(CallbackQueryHandler(handle_menu))
-
-    updater.start_polling()
-    updater.idle()
+if __name__ == '__main__':
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.document.ALL | filters.audio.ALL | filters.video.ALL, handle_file))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(CallbackQueryHandler(button))
+    print("Bot is running...")
+    app.run_polling()
